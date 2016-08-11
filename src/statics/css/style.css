@@ -1,0 +1,83 @@
+body {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0;
+    font-family: STKaiti, KaiTi, STFangsong, FangSong, sans-serif;
+    font-size: 20px;
+    line-height: 1.5;
+    color: #333;
+}
+
+h1, h2, h3, h4 {
+    margin: 15px 0 15px;
+    padding: 0;
+    color: #375EAB;
+    font-weight: bold;
+}
+
+h1 {
+    font-size: 40px;
+    line-height: 2.5;
+    margin: 20px 0 20px;
+    padding: 15px;
+    text-align: center;
+}
+
+h2 {
+    font-size: 30px;
+    line-height: 2;
+    padding: 15px;
+}
+
+h3 {
+    font-size: 25px;
+    line-height: 1.5;
+}
+
+h1 a, h2 a, h3 a, h4 a {
+    color: #375EAB;
+    text-decoration: none;
+}
+h1 a:hover, h2 a:hover, h3 a:hover, h4 a:hover{
+    border-bottom: 2px solid #375EAB;
+    padding-bottom: 5px;
+}
+
+hr {
+    border-style: none;
+    border-top: 1px dotted gray;
+}
+
+.summary {
+    margin: 0px;
+    padding-bottom: 10px;
+}
+
+.container {
+    padding: 10px;
+}
+
+.tags {
+    font-size: 16px;
+}
+.tags ul {
+    display: inline;
+    padding: 0;
+}
+.tags li {
+    display: inline;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.tags a {
+    color: #375EAB;
+    text-decoration: none;
+}
+
+.footer {
+    padding: 50px 0px 50px;
+    text-align: center;
+    font-size: 16px;
+}

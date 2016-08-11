@@ -22,3 +22,12 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+# Bin files
+bin/*
+pkg/*
+
+# Mac OS files
+.DS_Store
+
+README.html

@@ -1,0 +1,19 @@
+{{define "title"}} {{.Title}} {{end}}
+{{define "content"}}
+    <div class="container">
+        <h2>{{.Title}}</h2>
+        <hr>
+        <div>{{.Content|HTML}}</div>
+        <br>
+        <hr>
+        <div class="tags">Tags:&nbsp;
+        <ul>
+            {{range .Tags}}
+            <li><a href="#">{{.}}</a>&nbsp;</li>
+            {{end}}
+            <li style="float:right"><a href="/">返回</a></li>
+            </ul>
+        </div>
+        <br>
+    </div>
+{{end}}

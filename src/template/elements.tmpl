@@ -1,0 +1,82 @@
+{{/* inline elem */}}
+
+{{define "Code"}} <code>{{.}}</code> {{end}}
+
+{{define "Strong"}} <strong>{{.}}</strong> {{end}}
+
+{{define "Link"}} <a href="{{.URL}}">{{.Text}}</a> {{end}}
+
+{{define "Img"}} <img src="{{.Src}}"> {{end}}
+
+
+{{/* single-line elem */}}
+
+{{define "H1"}}
+<h1>{{.}}</h1>
+{{end}}
+
+{{define "H2"}}
+<h2>{{.}}</h2>
+{{end}}
+
+{{define "H3"}}
+<h3>{{.}}</h3>
+{{end}}
+
+{{define "Header"}}
+<h3>{{.}}</h3>
+{{end}}
+
+{{define "Weather"}}
+<div class="weather">{{.}}</div>
+{{end}}
+
+
+{{define "Tag"}}
+<div class="tags">
+{{range .}}
+	<span class="tag">{{.}}</span>
+{{end}}
+</div>
+{{end}}
+
+
+{{/* block elem */}}
+
+{{define "Ol"}}
+<ol>
+{{range .}}
+	<li>{{.}}</li>
+{{end}}
+</ol>
+{{end}}
+
+
+{{define "Ul"}}
+<ul>
+{{range .}}
+	<li>{{.}}</li>
+{{end}}
+</ul>
+{{end}}
+
+
+{{define "Quote"}}
+<blockquote>
+{{.}}
+</blockquote>
+{{end}}
+
+
+{{define "PreCode"}}
+<pre>
+	<code>{{.}}</code>
+</pre>
+{{end}}
+
+
+{{define "P"}}
+<p>
+{{.}}
+</p>
+{{end}}

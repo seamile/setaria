@@ -1,47 +1,16 @@
-{{/* inline elem */}}
+{{define "Code"}}<code>{{.}}</code>{{end}}
 
-{{define "Code"}} <code>{{.}}</code> {{end}}
+{{define "Strong"}}<strong>{{.}}</strong>{{end}}
 
-{{define "Strong"}} <strong>{{.}}</strong> {{end}}
+{{define "Link"}}<a href="{{.URL}}">{{.Text}}</a>{{end}}
 
-{{define "Link"}} <a href="{{.URL}}">{{.Text}}</a> {{end}}
+{{define "Img"}}<img src="{{.Src}}">{{end}}
 
-{{define "Img"}} <img src="{{.Src}}"> {{end}}
-
-
-{{/* single-line elem */}}
-
-{{define "H1"}}
-<h1>{{.}}</h1>
-{{end}}
-
-{{define "H2"}}
-<h2>{{.}}</h2>
-{{end}}
-
-{{define "H3"}}
-<h3>{{.}}</h3>
-{{end}}
 
 {{define "Header"}}
 <h3>{{.}}</h3>
 {{end}}
 
-{{define "Weather"}}
-<div class="weather">{{.}}</div>
-{{end}}
-
-
-{{define "Tag"}}
-<div class="tags">
-{{range .}}
-	<span class="tag">{{.}}</span>
-{{end}}
-</div>
-{{end}}
-
-
-{{/* block elem */}}
 
 {{define "Ol"}}
 <ol>
@@ -61,21 +30,23 @@
 {{end}}
 
 
-{{define "Quote"}}
+{{define "BlockQuote"}}
 <blockquote>
-{{.}}
+{{range .}}
+<p>{{.}}</p>
+{{end}}
 </blockquote>
 {{end}}
 
 
 {{define "PreCode"}}
-<pre>
-	<code>{{.}}</code>
-</pre>
+<pre><code{{if .Lang}} class="{{.Lang}}"{{end}}>
+{{.Codes}}
+</code></pre>
 {{end}}
 
 
-{{define "P"}}
+{{define "Paragraph"}}
 <p>
 {{.}}
 </p>

@@ -6,30 +6,184 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-var (
-	rDate = regexp.MustCompile(`\d{4}-(0[1-9]|1[0-2])-([0-2]\d)|3[01]`)
+type ElemName string
 
-	rHeader      = regexp.MustCompile(`^#{1,6} {1,3}(\S[\S ]+)`)             // # This is Header
-	rHr          = regexp.MustCompile(`^[-_*]{3,}`)                          // --- (wrapt by blank lines)
-	rWeather     = regexp.MustCompile(`^Weather: {1,3}(\S[\S ]+)`)           // Weather: 🌞
-	rTag         = regexp.MustCompile(`^Tags: {1,3}(\S[\S ]+)`)              // Tags: name1 name2 name3
-	rBlank       = regexp.MustCompile(`^[ \t]{0,}$`)                         // BlankLine
-	rOl          = regexp.MustCompile(`(?:^[ \t]{0,})\d+\. {1,3}(\S[ \S]+)`) // 1. OrderList
-	rUl          = regexp.MustCompile(`(?:^[ \t]{0,})[*+-] {1,3}(\S[ \S]+)`) // * UnorderList
-	rQuoteBlock  = regexp.MustCompile(`(?:^[ \t]{0,})> {1,3}(\S[ \S]+)`)     // > QuoteBlock
-	rPreCodeHead = regexp.MustCompile("(?:^[ \t]{0,})``` {1,3}(\\w+)$")      // ```Golang
-	rPreCodeTail = regexp.MustCompile("(?:^[ \t]{0,})```$")                  // ```
-	rStrong      = regexp.MustCompile(`\*\*(.+)\*\*`)                        // **strong**
-	rCode        = regexp.MustCompile("`(.+)`")                              // *code*
-	rLink        = regexp.MustCompile(`\[([\S ]+)\]\(([\S ]+)\)`)            // [img](http://example.com/)
-	rImg         = regexp.MustCompile(`!\[([\S ]+)\]\(([\S ]+)\)`)           // ![img](http://example.com/img.jpg)
-	rWord        = regexp.MustCompile(`\S+`)
+const (
+	// Element names
+	root        ElemName = "Note"
+	header      ElemName = "Header"
+	strong      ElemName = "Strong"
+	link        ElemName = "Link"
+	img         ElemName = "Img"
+	code        ElemName = "Code"
+	precode     ElemName = "PreCode"
+	orderlist   ElemName = "Ol"
+	unorderlist ElemName = "Ul"
+	blockquote  ElemName = "BlockQuote"
+	paragraph   ElemName = "P"
+
+	indent = 4 // indent spaces in note files
 )
+
+var (
+	rDate  = regexp.MustCompile(`\d{4}-(0[1-9]|1[0-2])-([0-2]\d)|3[01]`)
+	rBlank = regexp.MustCompile(`^[ \t]{0,}$`) // BlankLine
+
+	rWeather = regexp.MustCompile(`^Weather: {1,3}(\S[\S ]{0,})`) // Weather: 🌞
+	rTags    = regexp.MustCompile(`^Tags: {1,3}(\S[\S ]{0,})`)    // Tags: name1 name2 name3
+	rWord    = regexp.MustCompile(`\S+`)
+
+	rHeader = regexp.MustCompile(`^#{1,6} {1,3}(\S[\S ]{0,})`) // # This is Header
+	rHr     = regexp.MustCompile(`^[-_*]{3,}`)                 // --- (wrapt by blank lines)
+
+	rOl         = regexp.MustCompile(`^[ \t]{0,}\d+\. {1,3}(\S[\S ]{0,})`)           // 1. OrderList
+	rUl         = regexp.MustCompile(`^[ \t]{0,}[*+-] {1,3}(\S[\S ]{0,})`)           // * UnorderList
+	rBulletList = regexp.MustCompile(`^[ \t]{0,}(?:[*+-]|\d+\.) {1,3}(\S[\S ]{0,})`) // * UnorderList
+
+	rBlockQuote = regexp.MustCompile(`(?:^[ \t]{0,})> {1,3}(\S[\S ]{0,})`) // > BlockQuote
+
+	rPreCodeHead = regexp.MustCompile("(?:^[ \t]{0,})``` {0,3}(\\w{0,})") // ```Golang
+	rPreCodeTail = regexp.MustCompile("(?:^[ \t]{0,})```$")               // ```
+
+	rCode   = regexp.MustCompile("``(.+)``|`(.+)`") // *code*
+	rStrong = regexp.MustCompile(`\*\*(.+)\*\*`)    // **strong**
+
+	rLink = regexp.MustCompile(`\[([\S ]+)\]\(([\S ]+)\)`)  // [img](http://example.com/)
+	rImg  = regexp.MustCompile(`!\[([\S ]+)\]\(([\S ]+)\)`) // ![img](http://example.com/img.jpg)
+
+	elementTemplate *template.Template
+)
+
+func init() {
+	var err error
+	elementTemplate, err = template.ParseFiles("./template/elements.tmpl")
+	if err != nil {
+		fmt.Printf("Setaria: %s\n", err)
+		os.Exit(1)
+	}
+}
+
+func renderHTML(name ElemName, data interface{}) (string, error) {
+	b := new(bytes.Buffer)
+	err := elementTemplate.ExecuteTemplate(b, string(name), data)
+
+	if err != nil {
+		return "", err
+	} else {
+		return b.String(), nil
+	}
+}
+
+type Lines struct {
+	num     int
+	blanks  []int
+	content []string
+}
+
+func (l *Lines) length() int {
+	return len(l.content)
+}
+
+func (l *Lines) current() string {
+	return l.content[l.num]
+}
+
+func (l *Lines) line(n int) string {
+	return l.content[n]
+}
+
+func (l *Lines) jumpto(n int) string {
+	if 0 <= n && n < l.length() {
+		l.num += n
+	} else {
+		l.num = 0
+	}
+	return l.current()
+}
+
+func (l *Lines) isBlank(num int) bool {
+	for _, n := range l.blanks {
+		if num == n {
+			return true
+		}
+	}
+	return false
+}
+
+func (l *Lines) recordBlank(num int) {
+	if !l.isBlank(num) {
+		l.blanks = append(l.blanks, num)
+	}
+}
+
+type Block struct {
+	name   ElemName
+	level  int
+	blanks int
+
+	items  []string
+	buffer []string
+
+	html string
+	prev *Block
+}
+
+func (b *Block) spawn(name ElemName) *Block {
+	return &Block{name: name, level: b.level + 1, prev: b}
+}
+
+func (b *Block) addToBuffer(str string) {
+	b.buffer = append(b.buffer, str)
+}
+
+func (b *Block) resetBuffer() {
+	if len(b.buffer) > 0 {
+		item := strings.Join(b.buffer, "\n")
+		b.items = append(b.items, item)
+		b.buffer = b.buffer[:0] // reset the buf
+	}
+}
+
+func (b *Block) render() error {
+	b.resetBuffer()
+	if len(b.items) > 0 {
+		html, err := renderHTML(b.name, b.items)
+		if err != nil {
+			return err
+		} else {
+			b.html = html
+		}
+	}
+	return nil
+}
+
+func getLevel(spaces string, indent int) int {
+	level, acc := 0, 0
+	for _, chr := range spaces {
+		switch {
+		case chr == ' ':
+			acc++
+		case chr == '\t':
+			acc = indent
+		default:
+			break
+		}
+		if acc == indent {
+			acc = 0
+			level++
+		}
+	}
+	if 0 < acc && acc < indent {
+		level++
+	}
+	return level
+}
 
 type Note struct {
 	Title   string
@@ -41,7 +195,6 @@ type Note struct {
 
 	Slug    string
 	Summary string
-	content []string
 }
 
 // Parse a *.note file into note.HTML
@@ -51,13 +204,14 @@ func (note *Note) ParseFile(path string) error {
 		return err
 	}
 	// read the file
+	lines := new(Lines)
 	if bytes, err := ioutil.ReadFile(path); err != nil {
 		return err
 	} else {
-		note.content = strings.Split(string(bytes), "\n")
+		lines.content = strings.Split(string(bytes), "\n")
 	}
 	// parse
-	if err := note.parseContent("TODO: tmpl_path"); err != nil {
+	if err := note.parseContent(lines); err != nil {
 		return err
 	}
 	return nil
@@ -83,118 +237,176 @@ func slugify(filename string) string {
 	return r.ReplaceAllString(slug, "_")
 }
 
-type Elem int
+func (note *Note) parseContent(lines *Lines) error {
+	block := &Block{name: root, level: 0}
 
-const (
-	Root        Elem = iota
-	PlainText        = iota
-	BlankLine        = iota
-	OrderList        = iota
-	UnorderList      = iota
-	QuoteBlock       = iota
-	PreCode          = iota
-)
-
-type Block struct {
-	etype  Elem
-	level  int
-	blanks int
-	prev   *Block
-}
-
-type BulletList struct {
-	name   string
-	bullet []string
-}
-
-func (note *Note) parseContent(filenames ...string) error {
-	block := Block{etype: Root, level: 0, blanks: 0}
-	tmpl, err := template.ParseFiles(filenames...)
-
-	for num, line := range note.content {
-		switch {
-		case num == 0:
+	for cnt, line := lines.length(), ""; lines.num < cnt; lines.num++ {
+		print("Line: ", lines.num, " -> ")
+		switch line = lines.current(); {
+		case lines.num == 0:
 			note.Title = strings.TrimSpace(line)
-
-		case rHeader.MatchString(line):
-			header := rHeader.FindStringSubmatch(line)[1]
-			// renderHTML(t, name, data)
-
+			print("Title  : ", note.Title)
 		case rWeather.MatchString(line):
 			note.Weather = rWeather.FindStringSubmatch(line)[1]
+			print("Weather: ", note.Weather)
+		case rTags.MatchString(line):
+			note.Tags = rWord.FindAllString(rTags.FindStringSubmatch(line)[1], -1)
+			print("Tags   : ", note.Tags)
 
-		case rTag.MatchString(line):
-			note.Tags = rWord.FindAllString(rTag.FindStringSubmatch(line)[1], -1)
+		case rHeader.MatchString(line):
+			print("Header : ", rHeader.FindStringSubmatch(line)[1])
+			html, err := renderHTML(header, rHeader.FindStringSubmatch(line)[1])
+			if err != nil {
+				return err
+			}
+			block.addToBuffer(html)
 
 		case rHr.MatchString(line):
-			// TODO: <hr>
+			block.addToBuffer("\n<hr>\n")
+			print("Hr    : ", line)
 
-		case rBlank.MatchString(line):
-			block.blanks++
-			if block.blanks >= 2 {
-				// TODO: close current Block and open a new one
+		case rPreCodeHead.MatchString(line):
+			print("PreCode: ", line)
+			son := block.spawn(precode)
+			if err := parsePreCode(son, lines); err != nil {
+				return err
 			}
+			block.addToBuffer(son.html)
+
+		case rBlockQuote.MatchString(line):
+			print("Quote  : ", line)
+			son := block.spawn(blockquote)
+			if err := parseBlockQuote(son, lines); err != nil {
+				return err
+			}
+			block.addToBuffer(son.html)
+			print(block.html)
 
 		case rOl.MatchString(line):
-			rOl.FindStringSubmatch(line)
+			print("Ol     : ", line)
+			son := block.spawn(orderlist)
+			if err := parseBulletList(son, lines); err != nil {
+				return err
+			}
+			block.addToBuffer(son.html)
 
 		case rUl.MatchString(line):
-			rUl.FindStringSubmatch(line)
-
-		case rQuoteBlock.MatchString(line):
-			rQuoteBlock.FindStringSubmatch(line)
-
-		case rCode.MatchString(line):
-			rCode.FindStringSubmatch(line)
-
-		default:
-			// <br>
+			print("Ul     : ", line, "  |  ", lines.num)
+			son := block.spawn(unorderlist)
+			if err := parseBulletList(son, lines); err != nil {
+				return err
+			}
+			block.addToBuffer(son.html)
+			print("  |  ", lines.num)
 		}
+		// println(line)
+		println()
 	}
+	// println("\n\nHTML:\n", block.html, "\nEND\n")
+	note.Body = template.HTML(block.html)
 	return nil
 }
 
-func (note *Note) parseStrong(text string) {}
+func parsePreCode(block *Block, lines *Lines) error {
+	lang := ""
+	codes := []string{}
 
-// 列表
-func (note *Note) parseList() {}
-
-// 代码
-func (note *Note) parseCode() {}
-
-// 段落
-func (note *Note) parseSection() {}
-
-// 链接
-func (note *Note) parseLink() {}
-
-// 图像
-func (note *Note) parseImage() {}
-
-func renderHTML(t *template.Template, name string, data interface{}) (template.HTML, error) {
-	b := new(bytes.Buffer)
-	err := t.ExecuteTemplate(b, name, data)
-
-	if err != nil {
-		return "", err
+	// check
+	if line := lines.current(); !rPreCodeHead.MatchString(line) {
+		return errors.New("Not match PreCode")
 	} else {
-		return template.HTML(b.String()), nil
+		// get the lang
+		lang = rPreCodeHead.FindStringSubmatch(line)[1]
+		lines.num++
+		// pick out the codes
+		for cnt := lines.length(); lines.num < cnt; lines.num++ {
+			line = lines.current()
+			if rPreCodeTail.MatchString(line) {
+				break
+			} else {
+				codes = append(codes, line)
+			}
+		}
 	}
+
+	data := struct {
+		Codes string
+		Lang  string
+	}{strings.Join(codes, "\n"), lang}
+
+	html, err := renderHTML(precode, data)
+	block.html = html
+	return err
 }
 
-///////////////////////////////// test code ////////////////////////////////////
+func parseBlockQuote(block *Block, lines *Lines) error {
+loop:
+	for cnt, line := lines.length(), ""; lines.num < cnt; lines.num++ {
+		switch line = lines.current(); {
+		case rBlockQuote.MatchString(line):
+			block.addToBuffer(rBlockQuote.FindStringSubmatch(line)[1])
+		case rBlank.MatchString(line):
+			block.resetBuffer()
+		default:
+			break loop
+		}
 
-func _test() {
-	for i, s := range rHeader.FindStringSubmatch("# 大王叫我来巡山 - 阿斯蒂芬") {
-		println(i, "->", s)
 	}
-	// rTag.FindAllStringSubmatch(s, n)
-	// for i, w := range rTag.FindStringSubmatch("Tags:   多 云 转 晴 / 🌞 ") {
-	// 	println(i, w)
-	// }
 
+	return block.render()
+}
+
+func parseBulletList(block *Block, lines *Lines) error {
+	var line string
+loop:
+	for cnt := lines.length(); lines.num < cnt; lines.num++ {
+		switch line = lines.current(); {
+		case rBulletList.MatchString(line):
+			block.blanks = 0
+			lv := getLevel(line, indent)
+			switch {
+			case block.level == lv:
+				block.resetBuffer()
+				block.addToBuffer(rBulletList.FindStringSubmatch(line)[1])
+			case block.level < lv: // son block level
+				son := block.spawn(block.name)
+				parseBulletList(son, lines)
+				block.addToBuffer(son.html)
+			case block.level > lv: // father block level
+				break loop
+			}
+
+		case rBlank.MatchString(line):
+			block.resetBuffer()
+			block.blanks++
+		default:
+			if block.blanks == 0 {
+				block.addToBuffer(line)
+			} else {
+				block.render()
+				break loop
+			}
+			// reset blanks
+			block.blanks = 0
+		}
+	}
+	block.render()
+	return nil
+}
+
+// test code
+func _test() {
+	note := new(Note)
+	if err := note.ParseFile("../_test/2017-04-09_演示文稿.note"); err != nil {
+		println("Err:", err)
+	} else {
+		println("Body:", note.Body)
+	}
 }
 
 func main() {
+	// rWeather = regexp.MustCompile(`Weather: {1,3}(\S[\S ]{0,})`) // Weather: 🌞
+	// s := "Weather: 晴"
+	// println(rWeather.MatchString(s))
 	_test()
 }

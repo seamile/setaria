@@ -1,53 +1,60 @@
-{{define "Code"}}<code>{{.}}</code>{{end}}
+{{define "text"}}{{.}}{{end}}
 
-{{define "Strong"}}<strong>{{.}}</strong>{{end}}
+{{define "Code"}} <code>{{index . 0}}</code> {{end}}
 
-{{define "Link"}}<a href="{{.URL}}">{{.Text}}</a>{{end}}
+{{define "Strong"}} <strong>{{index . 0}}</strong> {{end}}
 
-{{define "Img"}}<img src="{{.Src}}">{{end}}
+{{define "Link"}} <a href="{{index . 1}}">{{if index . 0}}{{index . 0}}{{else}}{{index . 1}}{{end}}</a> {{end}}
+
+{{define "Img"}}<img{{if index . 0}} alt="{{index . 0}}"{{end}} src="{{index . 1}}">{{end}}
 
 
 {{define "Header"}}
-<h3>{{.}}</h3>
+<h3>{{.}}|inline</h3>
+{{end}}
+
+
+{{define "Paragraph"}}
+<p>{{.}}</p>
 {{end}}
 
 
 {{define "Ol"}}
 <ol>
-{{range .}}
-	<li>{{.}}</li>
-{{end}}
+{{- range .}}
+	<li>{{.}}|inline</li>
+{{- end}}
 </ol>
 {{end}}
 
 
 {{define "Ul"}}
 <ul>
-{{range .}}
+{{- range .}}
 	<li>{{.}}</li>
-{{end}}
+{{- end}}
 </ul>
 {{end}}
 
 
 {{define "BlockQuote"}}
 <blockquote>
-{{range .}}
-<p>{{.}}</p>
-{{end}}
+{{- range .}}
+	<p>{{.}}</p>
+{{- end}}
 </blockquote>
 {{end}}
 
 
 {{define "PreCode"}}
-<pre><code{{if .Lang}} class="{{.Lang}}"{{end}}>
+<pre>
+<code{{if .Lang}} class="{{.Lang}}"{{end}}>
 {{.Codes}}
-</code></pre>
+</code>
+</pre>
 {{end}}
 
 
-{{define "Paragraph"}}
-<p>
+{{define "Note"}}
 {{.}}
-</p>
 {{end}}

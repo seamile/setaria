@@ -1,60 +1,62 @@
-{{define "text"}}{{.}}{{end}}
+{{/* ImgData: []string{"code"}*/}}
+{{define "Code"}} <code>{{(index . 0)|safe}}</code> {{end}}
 
-{{define "Code"}} <code>{{index . 0}}</code> {{end}}
-
+{{/* StrongData: []string{"strong"}*/}}
 {{define "Strong"}} <strong>{{index . 0}}</strong> {{end}}
 
+{{/* LinkData: []string{"alt", "href"}*/}}
 {{define "Link"}} <a href="{{index . 1}}">{{if index . 0}}{{index . 0}}{{else}}{{index . 1}}{{end}}</a> {{end}}
 
-{{define "Img"}}<img{{if index . 0}} alt="{{index . 0}}"{{end}} src="{{index . 1}}">{{end}}
+{{/* ImgData: []string{"alt", "src"}*/}}
+{{define "Img"}} <img{{if index . 0}} alt="{{index . 0}}"{{end}} src="{{index . 1}}"> {{end}}
 
 
-{{define "Header"}}
-<h3>{{.}}|inline</h3>
+{{define "Header" -}}
+<h3>{{index . 0|inline}}</h3>
 {{end}}
 
 
-{{define "Paragraph"}}
-<p>{{.}}</p>
+{{define "P" -}}
+<p>{{index . 0|safe}}</p>
 {{end}}
 
 
-{{define "Ol"}}
+{{define "Ol" -}}
 <ol>
 {{- range .}}
-	<li>{{.}}|inline</li>
+<li>{{.|safe}}</li>
 {{- end}}
 </ol>
 {{end}}
 
 
-{{define "Ul"}}
+{{define "Ul" -}}
 <ul>
 {{- range .}}
-	<li>{{.}}</li>
+<li>{{.|safe}}</li>
 {{- end}}
 </ul>
 {{end}}
 
 
-{{define "BlockQuote"}}
+{{define "BlockQuote" -}}
 <blockquote>
 {{- range .}}
-	<p>{{.}}</p>
+	<p>{{.|safe}}</p>
 {{- end}}
 </blockquote>
 {{end}}
 
 
-{{define "PreCode"}}
-<pre>
-<code{{if .Lang}} class="{{.Lang}}"{{end}}>
-{{.Codes}}
-</code>
-</pre>
+{{define "PreCode" -}}
+<pre><code{{if index . 0}} class="{{index . 0|safe}}"{{end}}>
+{{index . 1|safe -}}
+</code></pre>
 {{end}}
 
 
 {{define "Note"}}
-{{.}}
+{{- range .}}
+{{.|safe}}
+{{- end}}
 {{end}}

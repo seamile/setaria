@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -19,7 +19,6 @@ const (
 
 	// Element names
 	EN_ROOT        ElemName = "Note"
-	EN_TEXT        ElemName = "text"
 	EN_HEADER      ElemName = "Header"
 	EN_LINK        ElemName = "Link"
 	EN_IMG         ElemName = "Img"
@@ -30,47 +29,72 @@ const (
 	EN_UNORDERLIST ElemName = "Ul"
 	EN_BLOCKQUOTE  ElemName = "BlockQuote"
 	EN_PARAGRAPH   ElemName = "P"
+	// others
+	EN_TEXT ElemName = "_text"
+	EN_HTML ElemName = "_html"
 )
 
 var (
-	ELEMENTS_TMPL *template.Template
-	BR_FLAGS      = []byte(`.。"”!！?？…`) // symbols for line break
-	HR            = []byte("\n<hr>\n")
-
 	// Custom elements
 	rWeather = regexp.MustCompile(`^Weather: {1,3}(\S[\S ]*)`) // Weather: 🌞 ⛅
 	rAuth    = regexp.MustCompile(`^Auth: {1,3}(\S[\S ]*)`)    // Auth: Lee Bai
 	rTags    = regexp.MustCompile(`^Tags: {1,3}(\S[\S ]*)`)    // Tags: name1 name2 name3
 	// Standard elements
 	rHeader      = regexp.MustCompile(`^#{1,6} {1,3}(\S[\S ]*)`)
-	rHr          = regexp.MustCompile(`^(-{3,}|_{3,}|\*{3,})$`)
-	rBulletList  = regexp.MustCompile(`^[ \t]*([*+-]|\d+\.) {1,3}(\S[\S ]*)`)
-	rOl          = regexp.MustCompile(`^[ \t]*\d+\. {1,3}(\S[\S ]*)`)
-	rUl          = regexp.MustCompile(`^[ \t]*[*+-] {1,3}(\S[\S ]*)`)
-	rBlockQuote  = regexp.MustCompile(`^[ \t]*> {0,3}(\S[\S ]*|[ \t]*$)`)
+	rHr          = regexp.MustCompile(`^(-{3,}|_{3,}|\*{3,})\s*$`)
+	rBulletList  = regexp.MustCompile(`^[ \t]*([*+-]|\d+\.) {1,3}(\S[\S ]*\s*$)`)
+	rBlockQuote  = regexp.MustCompile(`^[ \t]*> {0,3}(\S[\S ]*|\s*$)`)
 	rPreCodeHead = regexp.MustCompile("(?:^[ \t]*)``` {0,3}(\\w*)")
-	rPreCodeTail = regexp.MustCompile("(?:^[ \t]*)```$")
+	rPreCodeTail = regexp.MustCompile("(?:^[ \t]*)```\\s*$")
 	rCode        = regexp.MustCompile("``(.+?)``|`(.+?)`")
 	rStrong      = regexp.MustCompile(`\*\*(.+?)\*\*`)
-	rLink        = regexp.MustCompile(`[^!]\[([\w ]*)\]\((\S*) *?\)`)
-	rImg         = regexp.MustCompile(`!\[([\w ]*)\]\((\S*) *?\)`)
+	rImg         = regexp.MustCompile(`!\[([\S ]*?)\]\((\S*?)(?: \S*?)*?\)`)
+	rLink        = regexp.MustCompile(`\[([\S ]*?)\]\((\S*?)(?: \S*?)*?\)`)
 	// Others
 	rDate  = regexp.MustCompile(`\d{4}-(0[1-9]|1[0-2])-([0-2]\d)|3[01]`)
 	rWord  = regexp.MustCompile(`\S+`)
-	rBlank = regexp.MustCompile(`^[ \t]*$`)
+	rBlank = regexp.MustCompile(`^\s*$`)
+
+	BR_FLAGS = []byte(`.。"”!！?？…`) // symbols for line break
+
+	ELEMENTS_TMPL *template.Template
+	Funcs         = template.FuncMap{
+		"safe":   HTML,
+		"inline": parseInline,
+	}
+
+	InlineRegexps = map[ElemName]*regexp.Regexp{
+		EN_IMG:    rImg,
+		EN_LINK:   rLink,
+		EN_CODE:   rCode,
+		EN_STRONG: rStrong,
+	}
 )
 
 func init() {
-	var err error
-	ELEMENTS_TMPL, err = template.ParseFiles("./template/elements.tmpl")
-	if err != nil {
-		fmt.Printf("Setaria: %s\n", err)
-		os.Exit(1)
+	// init ELEMENTS_TMPL
+	tmpl, err := template.New("").Funcs(Funcs).ParseFiles("./template/elements.tmpl")
+	ELEMENTS_TMPL = template.Must(tmpl, err)
+}
+
+func HTML(text interface{}) template.HTML {
+	switch value := text.(type) {
+	case []byte:
+		return template.HTML(value)
+	case string:
+		return template.HTML(value)
+	case *bytes.Buffer:
+		return template.HTML(value.Bytes())
+	case template.HTML:
+		return value
+	default:
+		return template.HTML("")
 	}
 }
 
 type Lines struct {
 	num     int
+	blanks  []int
 	content []string
 }
 
@@ -92,13 +116,89 @@ func (l *Lines) jumpto(n int) string {
 	return line
 }
 
+func (l *Lines) isBlank(n int) bool {
+	for _, i := range l.blanks {
+		if i == n {
+			return true
+		}
+	}
+	return false
+}
+
+func (l *Lines) setBlank(n int) bool {
+	if l.isBlank(n) {
+		return false
+	} else {
+		l.blanks = append(l.blanks, n)
+		return false
+	}
+}
+
+func (l *Lines) backwardBlanks(num int) int {
+	if !sort.IntsAreSorted(l.blanks) {
+		sort.Ints(l.blanks)
+	}
+
+	cb := 0
+	idx := sort.SearchInts(l.blanks, num)
+	if idx < len(l.blanks) {
+		for num >= 0 && idx >= 0 && l.blanks[idx] == num {
+			cb++
+			num--
+			idx--
+		}
+	}
+
+	return cb
+}
+
+type Snippet struct {
+	name ElemName
+	text string
+	elem []string
+}
+
+func snippetsAppend(snippets []Snippet, snip Snippet) []Snippet {
+	if n := len(snippets); n > 0 {
+
+		if snippets[n-1].name == EN_TEXT && snip.name == EN_TEXT {
+			snippets[n-1].text += snip.text
+		} else {
+			snippets = append(snippets, snip)
+		}
+	} else {
+		snippets = append(snippets, snip)
+	}
+	return snippets
+}
+
+func snippetsRender(snippets []Snippet) (*bytes.Buffer, error) {
+	buf := new(bytes.Buffer)
+	for _, snip := range snippets {
+		if snip.name == EN_HTML {
+			buf.WriteString(snip.text)
+		} else if snip.name == EN_TEXT {
+			buf.WriteString(template.HTMLEscapeString(snip.text))
+		} else {
+			err := ELEMENTS_TMPL.ExecuteTemplate(buf, string(snip.name), snip.elem)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	// TODO: add <br> when find BR_FLAGS at the tail of line
+	// if bytes.Contains(BR_FLAGS, buf.Bytes()[buf.Len()-1:]) {
+	// 	buf.WriteString("\n<br>\n")
+	// }
+	return buf, nil
+}
+
 type Block struct {
 	name  ElemName
 	level int
 
-	children [][]template.HTML
-	buffer   []template.HTML
-	// buffer   *bytes.Buffer
+	children []string
+	snippets []Snippet
 
 	html template.HTML
 	prev *Block
@@ -108,50 +208,42 @@ func (b *Block) spawn(name ElemName) *Block {
 	return &Block{name: name, level: b.level + 1, prev: b}
 }
 
-// func (b *Block) buffer_check() {
-// 	if b.buffer == nil {
-// 		b.buffer = new(bytes.Buffer)
-// 	}
-// }
-
-func (b *Block) buffer_write(content interface{}) (err error) {
+func (b *Block) update(content interface{}) (err error) {
 	switch value := content.(type) {
 	case string:
-		// text = parseInLine(text)
-		b.buffer = append(b.buffer, template.HTML(value))
+		snip := Snippet{name: EN_TEXT, text: value}
+		b.snippets = snippetsAppend(b.snippets, snip)
 	case template.HTML:
-		b.buffer = append(b.buffer, value)
+		snip := Snippet{name: EN_HTML, text: string(value)}
+		b.snippets = snippetsAppend(b.snippets, snip)
+	case Snippet:
+		b.snippets = snippetsAppend(b.snippets, value)
+	case []Snippet:
+		b.snippets = append(b.snippets, value...)
 	}
-	// b.buffer_check()
-	// switch value := content.(type) {
-	// case []byte:
-	// 	_, err = b.buffer.Write(value)
-	// case string:
-	// 	_, err = b.buffer.WriteString(value)
-	// case template.HTML:
-	// 	_, err = b.buffer.WriteString(string(value))
-	// default:
-	// 	panic("Block.buffer_write: type error")
-	// }
 	return err
 }
 
-func (b *Block) buffer_dump() {
-	// b.buffer_check()
-	// if b.buffer.Len() > 0 {
-	// 	b.children = append(b.children, b.buffer.String())
-	// }
-	// b.buffer.Reset()
+func (b *Block) dump() {
+	if len(b.snippets) > 0 {
+		buf, err := parseInline(b.snippets)
+		if err != nil {
+			panic(err)
+		}
+		b.children = append(b.children, buf.String())
+	}
+	b.snippets = b.snippets[:0]
 }
 
 func (b *Block) render() error {
-	b.buffer_dump()
+	b.dump()
 	if len(b.children) > 0 {
-		html, err := renderHTML(b.name, b.children)
+		buf := new(bytes.Buffer)
+		err := ELEMENTS_TMPL.ExecuteTemplate(buf, string(b.name), b.children)
 		if err != nil {
 			return err
 		} else {
-			b.html = template.HTML(html)
+			b.html = template.HTML(buf.String())
 		}
 	}
 	return nil
@@ -159,12 +251,14 @@ func (b *Block) render() error {
 
 func (b *Block) backTo(level int) *Block {
 	block := b
-	for block.level > level && block.level >= 0 {
-		if err := block.render(); err != nil {
-			panic(err)
+	if level >= 0 {
+		for ; block.level > level; block = block.prev {
+			if err := block.render(); err != nil {
+				panic(err)
+			}
+			block.prev.update(block.html)
+			block.prev.dump()
 		}
-		block.prev.buffer_write(block.html)
-		block = block.prev
 	}
 	return block
 }
@@ -212,7 +306,7 @@ type Note struct {
 	Summary string
 }
 
-// Parse a *.note file into note.HTML
+// Parse a *.note file into note.Body
 func (note *Note) ParseFile(path string) error {
 	// parse the filename
 	if err := note.parsePath(path); err != nil {
@@ -223,7 +317,7 @@ func (note *Note) ParseFile(path string) error {
 	if bytes, err := ioutil.ReadFile(path); err != nil {
 		return err
 	} else {
-		lines.content = strings.Split(string(bytes), "\n")
+		lines.content = strings.SplitAfter(string(bytes), "\n")
 	}
 	// parse
 	if err := note.parseContent(lines); err != nil {
@@ -258,97 +352,66 @@ func (note *Note) parseContent(lines *Lines) error {
 
 	for cnt := lines.total(); lines.num < cnt; lines.num++ {
 		line = lines.current()
-		// println(lines.num, ":", line)
+
 		switch {
 		case lines.num == 0:
 			note.Title = strings.TrimSpace(line)
-			// println("	Title:", note.Title)
 
 		case rWeather.MatchString(line):
 			note.Weather = rWeather.FindStringSubmatch(line)[1]
-			// println("	Weather:", note.Weather)
 
 		case rAuth.MatchString(line):
 			note.Auth = strings.TrimSpace(rAuth.FindStringSubmatch(line)[1])
-			// println("	Auth:", note.Auth)
 
 		case rTags.MatchString(line):
 			note.Tags = rWord.FindAllString(rTags.FindStringSubmatch(line)[1], -1)
-			// println("	Tags:", note.Tags)
 
 		case rHeader.MatchString(line):
-			block = block.backTo(0) // Header is the top level element
-			html, err := renderHTML(EN_HEADER, rHeader.FindStringSubmatch(line)[1])
-			if err != nil {
-				return err
-			}
-			block.buffer_write(html)
-			// println("	Header:", rHeader.FindStringSubmatch(line)[1])
+			block = block.backTo(0).spawn(EN_HEADER)
+			block.update(rHeader.FindStringSubmatch(line)[1])
+			block = block.backTo(0)
 
 		case rHr.MatchString(line):
 			block = block.backTo(0) // Hr is the top level element
-			block.buffer_write("\n<hr>\n")
-			// println("	Hr:", line)
+			block.update(template.HTML("<hr>\n"))
+			block.dump()
 
 		case rPreCodeHead.MatchString(line):
-			// println("	PreCode Start:", lines.num, line)
 			son := block.spawn(EN_PRECODE)
 			if err := parsePreCode(son, lines); err != nil {
 				return err
 			}
-			block.buffer_write(son.html)
-			// println("	PreCode End  :", lines.num, lines.current())
+			block.update(son.html)
 
 		case rBlockQuote.MatchString(line):
-			// println("	Quote Start  :", lines.num, line)
 			son := block.spawn(EN_BLOCKQUOTE)
 			if err := parseBlockQuote(son, lines); err != nil {
 				return err
 			}
-			block.buffer_write(son.html)
-			// println("	Quote End    :", lines.num, lines.current())
+			block.update(son.html)
 
 		case rBulletList.MatchString(line):
 			if err := parseBulletList(block, lines); err != nil {
-				panic(err)
 				return err
 			}
-		}
-	}
-	block.buffer_dump()
-	for _, s := range block.children {
-		println(s)
-	}
-	block.render()
-	// println("\n++++++++++\nHTML:\n", block.html, "\n__________\n")
-	note.Body = template.HTML(block.html)
-	return nil
-}
 
-type Snippet struct {
-	name ElemName
-	text string
-	elem []string
-}
+		case rBlank.MatchString(line):
+			lines.setBlank(lines.num)
+			block.dump()
+			block = block.backTo(block.level - 1)
 
-func renderSnippets(snippets []Snippet) (*bytes.Buffer, error) {
-	buf := new(bytes.Buffer)
-	for _, snip := range snippets {
-		if snip.name == EN_TEXT {
-			buf.WriteString(template.HTMLEscapeString(snip.text))
-		} else {
-			err := ELEMENTS_TMPL.ExecuteTemplate(buf, string(snip.name), snip.elem)
-			if err != nil {
-				return nil, err
+		default:
+			if block.name != EN_PARAGRAPH {
+				block = block.spawn(EN_PARAGRAPH)
 			}
+			block.update(line)
 		}
 	}
-	// check BR
-	// bytes.Contains(BR_FLAGS, subslice)
-	if bytes.Contains(BR_FLAGS, buf.Bytes()[buf.Len()-1:]) {
-		buf.WriteString("\n<br>\n")
-	}
-	return buf, nil
+
+	block.dump()
+	block.render()
+	note.Body = block.html
+	return nil
 }
 
 func inlineFilter(re *regexp.Regexp, name ElemName, text string) []Snippet {
@@ -374,17 +437,20 @@ func inlineFilter(re *regexp.Regexp, name ElemName, text string) []Snippet {
 	return snippets
 }
 
-func parseInLine(line string) (*bytes.Buffer, error) {
-	reMap := map[ElemName]*regexp.Regexp{
-		EN_CODE:   rCode,
-		EN_IMG:    rImg,
-		EN_LINK:   rLink,
-		EN_STRONG: rStrong,
+func parseInline(line interface{}) (*bytes.Buffer, error) {
+	// type assertion for line
+	var snippets []Snippet
+	switch value := line.(type) {
+	case string:
+		snippets = []Snippet{Snippet{name: EN_TEXT, text: value}}
+	case []byte:
+		snippets = []Snippet{Snippet{name: EN_TEXT, text: string(value)}}
+	case []Snippet:
+		snippets = value
 	}
 	// filter inline elements
-	snippets := []Snippet{Snippet{name: EN_TEXT, text: line}}
 	for _, name := range []ElemName{EN_CODE, EN_IMG, EN_LINK, EN_STRONG} {
-		re := reMap[name]
+		re := InlineRegexps[name]
 		temp := []Snippet{}
 		for i := 0; i < len(snippets); i++ {
 			if snippets[i].name == EN_TEXT {
@@ -397,7 +463,7 @@ func parseInLine(line string) (*bytes.Buffer, error) {
 		}
 	}
 	// write into buffer
-	if buf, err := renderSnippets(snippets); err != nil {
+	if buf, err := snippetsRender(snippets); err != nil {
 		return nil, err
 	} else {
 		return buf, nil
@@ -405,34 +471,30 @@ func parseInLine(line string) (*bytes.Buffer, error) {
 }
 
 func parsePreCode(block *Block, lines *Lines) error {
-	lang := ""
-	codes := []string{}
-
-	// check
-	if line := lines.current(); !rPreCodeHead.MatchString(line) {
+	// check first line
+	line := lines.current()
+	if !rPreCodeHead.MatchString(line) {
 		return errors.New("Not match PreCode")
-	} else {
-		// get the lang
-		lang = rPreCodeHead.FindStringSubmatch(line)[1]
-		lines.num++
-		// pick out the codes
-		for cnt := lines.total(); lines.num < cnt; lines.num++ {
-			line = lines.current()
-			if rPreCodeTail.MatchString(line) {
-				break
-			} else {
-				codes = append(codes, line)
-			}
+	}
+
+	// get the lang
+	lang := rPreCodeHead.FindStringSubmatch(line)[1]
+	block.children = append(block.children, lang)
+	lines.num++
+
+	// pick out the codes
+	codes := new(bytes.Buffer)
+	for cnt := lines.total(); lines.num < cnt; lines.num++ {
+		line = lines.current()
+		if rPreCodeTail.MatchString(line) {
+			break
+		} else {
+			codes.WriteString(line)
 		}
 	}
 
-	data := struct {
-		Codes string
-		Lang  string
-	}{strings.Join(codes, "\n"), lang}
-	html, err := renderHTML(EN_PRECODE, data)
-	block.html = template.HTML(html)
-	return err
+	block.children = append(block.children, codes.String())
+	return block.render()
 }
 
 func parseBlockQuote(block *Block, lines *Lines) error {
@@ -444,9 +506,9 @@ func parseBlockQuote(block *Block, lines *Lines) error {
 			text = rBlockQuote.FindStringSubmatch(line)[1]
 			text = strings.TrimSpace(text)
 			if len(text) > 0 {
-				block.buffer_write(text)
+				block.update(text)
 			} else {
-				block.buffer_dump()
+				block.dump()
 			}
 		} else {
 			break
@@ -458,7 +520,7 @@ func parseBlockQuote(block *Block, lines *Lines) error {
 }
 
 func parseBulletLine(block *Block, line string) *Block {
-	// Get level, elemname, text from line
+	// Get the `level` `elemname` and `text` from line
 	res := rBulletList.FindStringSubmatch(line)
 	if len(res) != 3 {
 		panic("Not a Bullet Line")
@@ -472,91 +534,68 @@ func parseBulletLine(block *Block, line string) *Block {
 	text := res[2]
 	level := getLevel(line, INDENT)
 
-	// deal with the different level
-	switch {
-	case block.level < level: // son block level
+	// change block with level same as the line
+	if block.level < level {
+		// son block level
 		for block.level < level {
 			block = block.spawn(name)
 		}
-		block.buffer_dump()
-		block.buffer_write(text)
-
-	case block.level == level:
-		block.buffer_dump()
-		block.buffer_write(text)
-
-	case block.level > level: // father block level
+	} else if block.level > level {
+		// father block level
 		block = block.backTo(level)
 	}
+
+	// deal with the text
+	block.dump()
+	block.update(text)
+
 	return block
 }
 
 func parseBulletList(block *Block, lines *Lines) error {
-	println("	Bullet Start :", lines.num, lines.current())
 	var line string
-	var blanks int
 	ori_level := block.level
 LOOP:
 	for cnt := lines.total(); lines.num < cnt; lines.num++ {
 		line = lines.current()
 		switch {
 		case rBulletList.MatchString(line):
-			blanks = 0
 			block = parseBulletLine(block, line)
 
 		case rBlank.MatchString(line):
-			block.buffer_dump()
-			blanks++
+			block.dump()
+			lines.setBlank(lines.num)
 
 		default:
+			blanks := lines.backwardBlanks(lines.num - 1)
 			if blanks == 0 {
-				block.buffer_write(line)
+				block.update(line)
 			} else {
-				if err := block.render(); err != nil {
-					return err
-				}
 				break LOOP
 			}
-			// reset blanks
-			blanks = 0
 		}
-
 	}
 	block = block.backTo(ori_level)
+	block.dump()
 
 	lines.jumpto(lines.num - 1) // back to the last line of BulletList
-	println("	Bullet End   :", lines.num, lines.current())
-
 	return block.render()
 }
 
 // test code
-func _test() {
-	note := new(Note)
-	if err := note.ParseFile("../_test/2017-04-09_演示文稿.note"); err != nil {
-		println("Err:", err)
-	} else {
-		println("Body:", note.Body)
-	}
-}
+//
+// func _test() {
+// 	note := new(Note)
+// 	if err := note.ParseFile("../_test/2017-04-09_演示文稿.note"); err != nil {
+// 		fmt.Println(err)
+// 	} else {
+// 		fmt.Printf("<div><h1>%v</h1></div>\n", note.Title)
+// 		fmt.Printf("<div>日期：%v<br>天气：%v</div>\n", note.Date, note.Weather)
+// 		fmt.Printf("<div>——%v</div>\n", note.Auth)
+// 		fmt.Println(note.Body)
+// 	}
+// }
 
-func main() {
-	// _test()
-	// line := "aaa`bbb`ccc`ddd`eee``fff``ggg``h`iii"
-	line := "111`Miao`222**BBB**333[]()444![]()555."
-	// re := rCode
-	// fmt.Println(re.MatchString(line))
-
-	// fmt.Println(re.FindAllStringSubmatchIndex(line, -1), re.NumSubexp())
-	// res := inlineFilter(re, "----", line)
-	// for i, snip := range res {
-	// 	fmt.Println(i, ":", snip.name, snip.text)
-	// }
-	// fmt.Println(len(res))
-	s, e := parseInLine(line)
-	if e != nil {
-		fmt.Println(e)
-	} else {
-		fmt.Printf("%T \n%v", s, s)
-	}
-}
+// func main() {
+// 	_test()
+// }

@@ -57,7 +57,7 @@ var (
 
 	BR_FLAGS = []byte(`.。"”!！?？…`) // symbols for line break
 
-	ELEMENTS_TMPL *template.Template
+	ELEMENTS_TMPL *template.Template // have to initialized by func init()
 	Funcs         = template.FuncMap{
 		"safe":   HTML,
 		"inline": parseInline,
@@ -73,7 +73,7 @@ var (
 
 func init() {
 	// init ELEMENTS_TMPL
-	tmpl, err := template.New("").Funcs(Funcs).ParseFiles("./template/elements.tmpl")
+	tmpl, err := template.New("").Funcs(Funcs).ParseFiles("elements.tmpl")
 	ELEMENTS_TMPL = template.Must(tmpl, err)
 }
 

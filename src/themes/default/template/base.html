@@ -1,0 +1,21 @@
+{{define "base" -}}
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>{{template "Title" .}} - Setaria</title>
+	<link rel="stylesheet" type="text/css" href="/static/css/style.css">
+	{{template "Style" .}}
+</head>
+
+<body>
+	{{/* template "Navbar" */}}
+	{{/* template "Sidebar" */}}
+	<div class="Content">{{template "Content" .}}</div>
+	<div class="Footer">Copyright © Seamile</div>
+	{{/* template "Script" */}}
+</body>
+
+</html>
+{{- end}}

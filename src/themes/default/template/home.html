@@ -1,0 +1,12 @@
+{{define "Title"}}{{.Title}}{{end}}
+
+{{define "Content"}}
+	<h1>Seamile</h1>
+	{{- range .Docs}}
+	<div class="summary">
+		<h3><a href="/blog/{{.Link}}">{{.Title}}</a></h3>
+		<hr>
+		<p>{{.Content|HTML}}</p>
+	</div>
+	{{- end}}
+{{end}}

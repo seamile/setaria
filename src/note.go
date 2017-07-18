@@ -73,7 +73,8 @@ var (
 
 func init() {
 	// init ELEMENTS_TMPL
-	tmpl, err := template.New("").Funcs(Funcs).ParseFiles("elements.tmpl")
+	tmplPath := filepath.Join(RunningDir(), "elements.tmpl")
+	tmpl, err := template.New("").Funcs(Funcs).ParseFiles(tmplPath)
 	ELEMENTS_TMPL = template.Must(tmpl, err)
 }
 
@@ -96,6 +97,15 @@ type Lines struct {
 	num     int
 	blanks  []int
 	content []string
+}
+
+func (l *Lines) read(path string) error {
+	if bytes, err := ioutil.ReadFile(path); err != nil {
+		return err
+	} else {
+		l.content = strings.SplitAfter(string(bytes), "\n")
+		return nil
+	}
 }
 
 func (l *Lines) total() int {
@@ -284,16 +294,6 @@ LOOP:
 	return level
 }
 
-func renderHTML(name ElemName, data interface{}) (string, error) {
-	b := new(bytes.Buffer)
-	err := ELEMENTS_TMPL.ExecuteTemplate(b, string(name), data)
-	if err != nil {
-		return "", err
-	} else {
-		return b.String(), nil
-	}
-}
-
 type Note struct {
 	Title   string
 	Date    string
@@ -303,7 +303,7 @@ type Note struct {
 	Body    template.HTML
 
 	Slug    string
-	Summary string
+	Summary string // TODO: implement Summary
 }
 
 // Parse a *.note file into note.Body
@@ -314,12 +314,11 @@ func (note *Note) ParseFile(path string) error {
 	}
 	// read the file
 	lines := new(Lines)
-	if bytes, err := ioutil.ReadFile(path); err != nil {
+	if err := lines.read(path); err != nil {
 		return err
-	} else {
-		lines.content = strings.SplitAfter(string(bytes), "\n")
 	}
-	// parse
+
+	// parse *.note file
 	if err := note.parseContent(lines); err != nil {
 		return err
 	}

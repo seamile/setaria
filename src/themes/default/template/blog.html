@@ -1,11 +1,12 @@
-{{define "Title"}} {{.Title}} {{end}}
+{{define "Title"}}{{.Title}}{{end}}
 
 {{define "Content"}}
 	<div class="container">
-		<h2>{{.Title}}</h2>
+		<h1>{{.Title}}</h1>
+		<div class="info-bar"><span class="date">{{.Date}}</span></div>
 		<hr>
 
-		<div>{{.Content|HTML}}</div>
+		<div>{{.Body|safe}}</div>
 		<br>
 		<hr>
 

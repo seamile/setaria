@@ -5,16 +5,19 @@
 <head>
 	<meta charset="utf-8">
 	<title>{{template "Title" .}} - Setaria</title>
+	<meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1">
 	<link rel="stylesheet" type="text/css" href="/static/css/style.css">
-	{{template "Style" .}}
+	{{/* template "Style" . */}}
 </head>
 
 <body>
-	{{/* template "Navbar" */}}
-	{{/* template "Sidebar" */}}
-	<div class="Content">{{template "Content" .}}</div>
-	<div class="Footer">Copyright © Seamile</div>
-	{{/* template "Script" */}}
+	<div class="container">
+		{{/* template "Navbar" . */}}
+		{{/* template "Sidebar" . */}}
+		<div class="content">{{template "Content" .}}</div>
+	</div>
+	<div class="footer">Powered by Setaria</div>
+	{{/* template "Script" . */}}
 </body>
 
 </html>

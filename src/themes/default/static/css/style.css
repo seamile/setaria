@@ -1,44 +1,52 @@
+html{
+    height:100%;
+}
+
 body {
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+    max-width: 768px;
+    min-height: 100%;
+    margin: 0 auto 0 auto;
     padding: 0;
-    font-family: STKaiti, KaiTi, STFangsong, FangSong, sans-serif;
-    font-size: 20px;
+    position: relative;
+    font-family: "Times", "KaiTi", "FangSong", serif;
+    font-size: 1.5em;
     line-height: 1.5;
     color: #333;
 }
 
+a {
+    color: black;
+    text-decoration: none;
+    border-bottom: 2px solid black;
+    padding-bottom: 1px;
+}
+
 h1, h2, h3, h4 {
-    margin: 15px 0 15px;
-    padding: 0;
-    color: #375EAB;
+    color: black;
+    font-family: "Helvetica", "Arial", sans-serif;
     font-weight: bold;
+    padding-top: 20px;
 }
 
 h1 {
-    font-size: 40px;
-    line-height: 2.5;
-    margin: 20px 0 20px;
-    padding: 15px;
+    font-size: 2.0em;
+    line-height: 1.0;
     text-align: center;
+    margin-bottom: 60px;
 }
 
 h2 {
-    font-size: 30px;
-    line-height: 2;
-    padding: 15px;
+    font-size: 1.5em;
+    line-height: 1.5;
+    text-align: left;
 }
 
 h3 {
-    font-size: 25px;
-    line-height: 1.5;
+    font-size: 1.0em;
+    line-height: 1.0;
+    text-align: left;
 }
 
-h1 a, h2 a, h3 a, h4 a {
-    color: #375EAB;
-    text-decoration: none;
-}
 h1 a:hover, h2 a:hover, h3 a:hover, h4 a:hover{
     border-bottom: 2px solid #375EAB;
     padding-bottom: 5px;
@@ -49,13 +57,65 @@ hr {
     border-top: 1px dotted gray;
 }
 
-.summary {
-    margin: 0px;
-    padding-bottom: 10px;
+pre {
+    padding: 16px;
+    overflow: auto;
+    font-size: 85%;
+    background-color: #f7f7f7;
+    border-radius: 5px;
+}
+
+blockquote {
+    border-left: 10px solid #ddd;
+    margin: 10px auto;
+    padding: 4px 20px;
+    font-size: 90%;
+    background-color: #f7f7f7;
+}
+
+p {
+    margin: 16px 0;
 }
 
 .container {
+    padding-bottom: 80px;
+}
+
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 50px;
+    text-align: center;
+    font-size: 0.6em;
+}
+
+.content {
     padding: 10px;
+}
+
+.date {
+    color: #757575;
+}
+
+.index {
+    padding: 0 20px;
+    margin: 5px 20px;
+    font-family: "Helvetica", "Arial", sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.index .date {
+    margin-right: 20px;
+}
+.index a:hover {
+    background-color: #dedede;
+}
+
+.info-bar {
+    text-align: center;
+    font-size: 0.75em;
 }
 
 .tags {
@@ -70,14 +130,4 @@ hr {
     list-style: none;
     padding: 0;
     margin: 0;
-}
-.tags a {
-    color: #375EAB;
-    text-decoration: none;
-}
-
-.footer {
-    padding: 50px 0px 50px;
-    text-align: center;
-    font-size: 16px;
 }

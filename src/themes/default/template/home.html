@@ -3,10 +3,9 @@
 {{define "Content"}}
 	<h1>Seamile</h1>
 	{{- range .Docs}}
-	<div class="summary">
-		<h3><a href="/blog/{{.Link}}">{{.Title}}</a></h3>
-		<hr>
-		<p>{{.Content|HTML}}</p>
-	</div>
+		<div class="index">
+			<span class="date">{{.Date}}</span>
+			<a href="/blog/{{.Slug}}">{{.Title}}</a>
+		</div>
 	{{- end}}
 {{end}}

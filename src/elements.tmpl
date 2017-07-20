@@ -50,7 +50,7 @@
 
 {{define "PreCode" -}}
 <pre><code{{if index . 0}} class="{{index . 0|safe}}"{{end}}>
-{{index . 1|safe -}}
+{{- index . 1|safe -}}
 </code></pre>
 {{end}}
 

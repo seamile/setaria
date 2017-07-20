@@ -340,9 +340,9 @@ func (note *Note) parsePath(path string) error {
 }
 
 func slugify(filename string) string {
-	slug := strings.TrimSuffix(filename, filepath.Ext(filename))
-	r := regexp.MustCompile(`\W+`)
-	return r.ReplaceAllString(slug, "_")
+	name := strings.TrimSuffix(filename, filepath.Ext(filename))
+	r := regexp.MustCompile(`[^\w\d\p{L}\p{N}]+`)
+	return r.ReplaceAllString(name, "_")
 }
 
 func (note *Note) parseContent(lines *Lines) error {

@@ -16,7 +16,6 @@ var (
 
 func main() {
 	flag.Parse()
-	server.init(*home, *theme)
-	log.Printf("Server running at %s:%d", *host, *port)
-	log.Fatal(server.run(*host, *port))
+	server.Init(*home, *theme)
+	log.Fatal(server.Run(*host, *port))
 }

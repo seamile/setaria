@@ -1,3 +1,7 @@
+@media (max-width: 760px) {
+    html { font-size: 0.8em; }
+}
+
 html{
     height:100%;
 }
@@ -8,16 +12,16 @@ body {
     margin: 0 auto 0 auto;
     padding: 0;
     position: relative;
-    font-family: "Times", "KaiTi", "FangSong", serif;
-    font-size: 1.5em;
-    line-height: 1.5;
+    font-family: "Times", "Times New Roman", serif;
+    font-size: 1.2em;
+    line-height: 1.6;
     color: #333;
 }
 
 a {
     color: black;
     text-decoration: none;
-    border-bottom: 2px solid black;
+    border-bottom: 1px solid black;
     padding-bottom: 1px;
 }
 
@@ -42,7 +46,7 @@ h2 {
 }
 
 h3 {
-    font-size: 1.0em;
+    font-size: 1.1em;
     line-height: 1.0;
     text-align: left;
 }

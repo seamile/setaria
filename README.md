@@ -1,35 +1,36 @@
 Setaria
 =======
 
-Seraria is a simple static blog engine that written with go-lang.
-
-You can see the demo [here](http://seamile.org).
+Seraria is a simple static blog engine that written in go-lang.
 
 
 Install
 -------
 
-... ...
+`go get github.com/seamile/setaria`
 
 
 Usage
 -----
 
-1. `--host / -h` default: localhost
-2. `--port / -p` default: 8000
-3. `--base / -b` default: ./setaria
-4. `--theme / -t` default: 'default'
+Basic usage:
+```
+$ setaria
+```
 
+You can specify these params as you need:
+
+```
+-host   your host ip or hostname      (default: localhost)
+-port   the server port for listening (default: 8000)
+-notes  the blog files' storage path  (default: ./Setaria)
+-theme  blog theme                    (default: simple)
+```
 
 Note Format
 -----------
 
 The format of note files is a subset of markdown.
-
-Title: the first line of the file
-
-any more ...
-bala bala ...
 
 
 TODO
@@ -37,3 +38,4 @@ TODO
 
 - Auto reload when note files changed
 - Search
+- more themes

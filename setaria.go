@@ -6,16 +6,16 @@ import (
 )
 
 var (
-	host  = flag.String("host", "localhost", "server listen address")
-	port  = flag.Int("port", 8000, "server listen port")
-	home  = flag.String("home", "./setaria", "home directory for notebook")
-	theme = flag.String("theme", "default", "specify a theme for web style")
+	host  = flag.String("host", "localhost", "your host ip or hostname")
+	port  = flag.Int("port", 8000, "the server port for listening")
+	notes = flag.String("notes", "./SetariaNotes", "the blog files' storage path")
+	theme = flag.String("theme", "simple", "blog theme")
 
 	server = new(Server)
 )
 
 func main() {
 	flag.Parse()
-	server.Init(*home, *theme)
+	server.Init(*notes, *theme)
 	log.Fatal(server.Run(*host, *port))
 }

@@ -1,0 +1,22 @@
+{{define "Title"}}{{.Title}}{{end}}
+
+{{define "Content"}}
+	<div class="container">
+		<h1>{{.Title}}</h1>
+		<div class="info-bar"><span class="date">{{.Date}}</span></div>
+		<hr>
+
+		<div>{{.Body|safe}}</div>
+		<br>
+		<hr>
+
+		<div class="tags">Tags:&nbsp;
+			<ul>
+				{{- range .Tags}}
+				<li><a href="#">{{.}}</a>&nbsp;</li>
+				{{- end}}
+				<li style="float:right"><a href="/">返回</a></li>
+			</ul>
+		</div>
+	</div>
+{{end}}

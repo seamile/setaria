@@ -1,16 +1,43 @@
 Setaria
 =======
 
-Seraria 是一个简洁的静态 Blog 引擎。采用 Golang 开发。
+Seraria is a simple static blog engine that written in go-lang.
+
+
+Install
+-------
+
+```
+$ go get github.com/seamile/setaria
+```
+
+
+Usage
+-----
+
+Basic usage:
+```
+$ setaria
+```
+
+You can specify these params as you need:
+
+```
+-host   your host ip or hostname      (default: localhost)
+-port   the server port for listening (default: 8000)
+-notes  the blog files' storage path  (default: ./Setaria)
+-theme  blog theme                    (default: simple)
+```
+
+Note Format
+-----------
+
+The format of note files is a subset of markdown.
 
 
 TODO
-====
+----
 
-- 命令行
-    *  ` --host / -h `
-    *  ``` --port / -p ```
-    *  ``` --dir  / -d ```
-- 身份验证
-- 监控文章、模板目录变化，自动 reload
-- 搜索
+- Auto reload when note files changed
+- Search
+- more themes

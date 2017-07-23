@@ -1,0 +1,24 @@
+{{define "base" -}}
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>{{template "Title" .}} - Setaria</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="/static/css/style.css">
+	{{/* template "Style" . */}}
+</head>
+
+<body>
+	<div class="container">
+		{{/* template "Navbar" . */}}
+		{{/* template "Sidebar" . */}}
+		<div class="content">{{template "Content" .}}</div>
+	</div>
+	<div class="footer">Powered by Setaria</div>
+	{{/* template "Script" . */}}
+</body>
+
+</html>
+{{- end}}

@@ -1,5 +1,5 @@
 {{/* ImgData: []string{"code"}*/}}
-{{define "Code"}} <code>{{(index . 0)|safe}}</code> {{end}}
+{{define "Code"}} <code class="codesnip">{{(index . 0)|safe}}</code> {{end}}
 
 {{/* StrongData: []string{"strong"}*/}}
 {{define "Strong"}} <strong>{{index . 0}}</strong> {{end}}
@@ -50,7 +50,7 @@
 
 {{define "PreCode" -}}
 <pre><code{{if index . 0}} class="{{index . 0|safe}}"{{end}}>
-{{index . 1|safe -}}
+{{- index . 1|safe -}}
 </code></pre>
 {{end}}
 

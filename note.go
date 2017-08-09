@@ -332,7 +332,7 @@ func (note *Note) parsePath(path string) error {
 	// parse date
 	note.Date = rDate.FindString(filename)
 	if note.Date == "" {
-		return errors.New(fmt.Sprintf("Wrong filename format: %s", filename))
+		return fmt.Errorf("Wrong filename format: %s", filename)
 	}
 	// parse slug
 	note.Slug = slugify(filename)

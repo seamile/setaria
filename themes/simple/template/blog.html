@@ -10,7 +10,10 @@
 		<br>
 		<hr>
 
-		<div class="tags">Tags:&nbsp;
+		<div class="tags">
+            {{- if .Tags -}}
+            Tags:&nbsp;
+            {{- end}}
 			<ul>
 				{{- range .Tags}}
 				<li><a href="#">{{.}}</a>&nbsp;</li>
